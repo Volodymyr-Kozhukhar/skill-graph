@@ -1,6 +1,14 @@
 import { createServer } from "node:http";
 import { portNumeric } from "./config.js";
 
+function isCreateTaskInput(value: unknown): value is { title: string }{
+    if(value !== null && typeof value === "object" && !Array.isArray(value))
+        if("title" in value && typeof value.title === "string")
+            if(value.title.trim() !== "")
+                return true;
+    return false;
+}
+
 const server = createServer((request, response) => {
     
     switch(request.method){
