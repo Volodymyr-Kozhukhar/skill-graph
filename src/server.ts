@@ -1,7 +1,19 @@
-import { createServer } from "node:http";
+import express  from "express";
 import { portNumeric } from "./config.js";
 
-function isCreateTaskInput(value: unknown): value is { title: string }{
+type CreateSkillInput = {
+    title: string,
+};
+
+type Skill = {
+    id: number,
+    title: string,
+}
+
+const skills: Skill[] = [];
+let nextSkillId: number = 1;
+
+function isCreateSkillInput(value: unknown): value is CreateSkillInput {
     if(value !== null && typeof value === "object" && !Array.isArray(value))
         if("title" in value && typeof value.title === "string")
             if(value.title.trim() !== "")
@@ -9,37 +21,43 @@ function isCreateTaskInput(value: unknown): value is { title: string }{
     return false;
 }
 
-const server = createServer((request, response) => {
-    
-    switch(request.method){
-        case "GET":
-            if(request.url === "/"){
-                response.statusCode = 200;
-                response.setHeader("Content-Type","text/plain; charset=utf-8");
-                response.end("Node server is running");
-                break;
-            }
+const app = express();
+app.use(express.json());
 
-            if(request.url === "/health"){
-                response.statusCode = 200;
-                response.setHeader("Content-Type","application/json; charset=utf-8");
-                response.end(JSON.stringify({"status": "ok"}));
-                break;
-            }
-
-            response.statusCode = 404;
-            response.setHeader("Content-Type","application/json; charset=utf-8");
-            response.end(JSON.stringify({"error": "Not found"}));
-            break;
-
-        default:
-            response.statusCode = 404;
-            response.setHeader("Content-Type","application/json; charset=utf-8");
-            response.end(JSON.stringify({"error": "Not found"}));
-            break;
-    };
+app.get("/", (request, response) => {
+    response.send("Node server is running");
 });
 
-server.listen(portNumeric, () => {
+app.get("/health", (request, response) => {
+    response.json({ status: "ok" });
+});
+
+app.get("/skills", (request, response) => {
+    response.json(skills);
+});
+
+app.post("/skills", (request, response) => {
+    const body: unknown = request.body;
+    if(isCreateSkillInput(body)){
+        const newSkill: Skill = {id: nextSkillId, title: body.title.trim()};
+        skills.push(newSkill);
+        response.status(201).json(newSkill);
+        nextSkillId += 1;
+        return;
+    }
+    response.status(400).json({ "error": "Invalid skill input" });
+});
+
+app.use((request, response) => {
+    response.status(404).json({"error": "Not found"});
+});
+
+
+app.listen(portNumeric, (error) => {
+    if(error){
+        console.log(error.message);
+        return;
+    }
+
     console.log(`Server is running at http://localhost:${portNumeric}`);
 });
