@@ -10,11 +10,14 @@ The backend uses Node.js, Express, and TypeScript. Skills are currently stored i
 - `GET /health` returns `200` with `{"status":"ok"}`.
 - `GET /skills` lists skills.
 - `GET /skills/:id` returns one skill.
+- `GET /skills/:id/score` derives a numeric score from the current proficiency level.
 - `POST /skills` creates a skill with a title and proficiency level.
 - `PATCH /skills/:id` updates the title, proficiency level, or both.
 - `DELETE /skills/:id` deletes a skill.
 - Runtime validation rejects invalid request bodies and route IDs.
-- Other requests return `404` with `{"error":"Not found"}`.
+- API errors use a consistent JSON structure with a machine-readable code and a safe message.
+- Malformed JSON is handled without exposing an HTML error page or stack trace.
+- Other requests return a JSON `404 NOT_FOUND` error.
 - The `PORT` environment variable sets the port; the default is `4000`.
 
 Supported proficiency levels are `beginner`, `intermediate`, and `advanced`.
@@ -45,7 +48,7 @@ npm run typecheck
 
 ## Next steps
 
-- Consistent API errors and automated API tests.
+- Automated API tests.
 - Relationships between skills and progress scoring.
 - PostgreSQL persistence.
 - React interface for skills, relationships, and progress.
