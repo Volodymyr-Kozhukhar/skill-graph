@@ -8,6 +8,7 @@ The backend uses Node.js, Express, and TypeScript. Skills are currently stored i
 
 - `GET /` returns `200` with a plain-text server status.
 - `GET /health` returns `200` with `{"status":"ok"}`.
+- `GET /ready` verifies the PostgreSQL connection and returns `200` with `{"status":"ready"}`.
 - `GET /skills` lists skills.
 - `GET /skills/:id` returns one skill.
 - `GET /skills/:id/score` derives a numeric score from the current proficiency level.
@@ -18,7 +19,7 @@ The backend uses Node.js, Express, and TypeScript. Skills are currently stored i
 - API errors use a consistent JSON structure with a machine-readable code and a safe message.
 - Malformed JSON is handled without exposing an HTML error page or stack trace.
 - Other requests return a JSON `404 NOT_FOUND` error.
-- The `PORT` environment variable sets the port; the default is `4000`.
+- The `SERVER_PORT` environment variable sets the port; the default is `4000`.
 
 Supported proficiency levels are `beginner`, `intermediate`, and `advanced`.
 
@@ -33,14 +34,15 @@ Example request body:
 
 ## Run locally
 
-Use Node.js 24 and npm.
+Use Node.js 24, npm, and Docker Desktop. Create `.env` from `.env.example`, replace the example database password, and then run:
 
 ```sh
 npm ci
+docker compose up -d
 npm run dev
 ```
 
-Open `http://localhost:4000/health`. Stop the server with Ctrl+C.
+Open `http://localhost:4000/health` to check the server and `http://localhost:4000/ready` to check the database connection. Stop the server with Ctrl+C.
 
 ```sh
 npm run typecheck
@@ -50,7 +52,7 @@ npm run typecheck
 
 - Automated API tests.
 - Relationships between skills and progress scoring.
-- PostgreSQL persistence.
+- Replace the in-memory skill storage with a PostgreSQL repository layer.
 - React interface for skills, relationships, and progress.
 - Authentication and deployment.
 

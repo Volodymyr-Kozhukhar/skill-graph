@@ -1,5 +1,6 @@
 import express, {type NextFunction, type Request, type Response,} from "express";
 import { portNumeric } from "./config.js";
+import { databasePool } from "./db.js";
 
 type ProficiencyLevel = "beginner" | "intermediate" | "advanced";
 type ErrorCodes = "INVALID_ID" | "INVALID_BODY" | "INVALID_JSON" | "NOT_FOUND" | "INTERNAL_ERROR";
@@ -86,6 +87,15 @@ app.get("/", (request, response) => {
 
 app.get("/health", (request, response) => {
     response.json({ status: "ok" });
+});
+
+app.get("/ready", async (_request, response, next) => {
+    try {
+        await databasePool.query("SELECT 1");
+        response.json({ status: "ready" });
+    } catch (error) {
+        next(error);
+    }
 });
 
 app.get("/skills", (request, response) => {
