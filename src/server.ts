@@ -1,8 +1,9 @@
 import express, {type NextFunction, type Request, type Response,} from "express";
 import { portNumeric } from "./config.js";
 import { databasePool } from "./db.js";
+import type { ProficiencyLevel, CreateSkillInput, UpdateSkillInput } from "./models/skill.js";
+import { findAllSkills, findSkillById, createSkill, updateSkill, deleteSkill} from "./repositories/skillRepository.js";
 
-type ProficiencyLevel = "beginner" | "intermediate" | "advanced";
 type ErrorCodes = "INVALID_ID" | "INVALID_BODY" | "INVALID_JSON" | "NOT_FOUND" | "INTERNAL_ERROR";
 
 type JsonParseError = SyntaxError & {
@@ -22,22 +23,6 @@ const proficiencyScores: Record<ProficiencyLevel, number> = {
     intermediate: 2,
     advanced: 3
 };
-
-type Skill = {
-    id: number,
-    title: string,
-    proficiency: ProficiencyLevel,
-}
-
-type CreateSkillInput = Pick<
-    Skill,
-    "title" | "proficiency"
->;
-
-type UpdateSkillInput = Partial<CreateSkillInput>;
-
-let skills: Skill[] = [];
-let nextSkillId: number = 1;
 
 //Predicate for an error in middleware
 function isJsonParseError(error: unknown): error is JsonParseError {
@@ -98,55 +83,78 @@ app.get("/ready", async (_request, response, next) => {
     }
 });
 
-app.get("/skills", (request, response) => {
-    response.json(skills);
+app.get("/skills", async (request, response, next) => {
+    try {
+        const databaseSkills = await findAllSkills();
+        response.json(databaseSkills);
+    }catch(error) {
+        next(error);
+    }
 });
 
-app.get("/skills/:id", (request, response) => {
+app.get("/skills/:id", async (request, response, next) => {
     const id = Number(request.params.id);
     
     if(Number.isInteger(id) && id > 0){
-        const skill = skills.find(skill => skill.id === id);
-        if(skill === undefined){
-            sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+        try{
+            const databaseSkill = await findSkillById(id);
+            if(databaseSkill === undefined){
+                sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+                return;
+            }
+            response.json(databaseSkill);
+            return;
+        } catch(error) {
+            next(error)
             return;
         }
-        response.json(skill);
-        return;
     }
     sendApiError(response, 400, "INVALID_ID", "Invalid skill id");
 });
 
-app.get("/skills/:id/score", (request, response) => {
+app.get("/skills/:id/score", async (request, response, next) => {
     const id = Number(request.params.id);
     
     if(Number.isInteger(id) && id > 0){
-        const skill = skills.find(skill => skill.id === id);
-        if(skill === undefined){
-            sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+        try{
+            const skill = await findSkillById(id);
+            if(skill === undefined){
+                sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+                return;
+            }
+            response.json({skillId: skill.id, proficiency: skill.proficiency, score: proficiencyScores[skill.proficiency]});
+            return;
+        } catch(error){
+            next(error);
             return;
         }
-        response.json({skillId: skill.id, proficiency: skill.proficiency, score: proficiencyScores[skill.proficiency]});
-        return;
     }
     sendApiError(response, 400, "INVALID_ID", "Invalid skill id");
 });
 
 //POST
-app.post("/skills", (request, response) => {
+app.post("/skills", async (request, response, next) => {
     const body: unknown = request.body;
-    if(isCreateSkillInput(body)){
-        const newSkill: Skill = {id: nextSkillId, title: body.title.trim(), proficiency: body.proficiency};
-        skills.push(newSkill);
-        response.status(201).json(newSkill);
-        nextSkillId += 1;
+    if(!isCreateSkillInput(body)){
+        sendApiError(response, 400, "INVALID_BODY", "Invalid skill input");
         return;
     }
-    sendApiError(response, 400, "INVALID_BODY", "Invalid skill input");
+
+    const skillInput: CreateSkillInput = {
+        title: body.title.trim(),
+        proficiency: body.proficiency,
+    };
+
+    try{
+        const newSkill = await createSkill(skillInput);
+        response.status(201).json(newSkill);
+    } catch(error){
+        next(error);
+    }
 });
 
 //PATCH
-app.patch("/skills/:id", (request, response) =>{
+app.patch("/skills/:id", async (request, response, next) =>{
     const id = Number(request.params.id);
     
     if(Number.isInteger(id) && id > 0){
@@ -155,40 +163,50 @@ app.patch("/skills/:id", (request, response) =>{
             sendApiError(response, 400, "INVALID_BODY", "Invalid update properties");
             return;
         }
-        const skill = skills.find(skill => skill.id === id);
-        if(skill === undefined){
-            sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+
+        const updateSkillInput: UpdateSkillInput = {};
+        if(skillUpdateProperties.title !== undefined){
+            updateSkillInput.title = skillUpdateProperties.title.trim();
+        }
+        if(skillUpdateProperties.proficiency !== undefined){
+            updateSkillInput.proficiency = skillUpdateProperties.proficiency;
+        }
+
+        try{
+            const updatedSkill = await updateSkill(id, updateSkillInput);
+
+            if(updatedSkill === undefined){
+                sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+                return;
+            }
+            response.json(updatedSkill);
+            return;
+
+        } catch(error){
+            next(error);
             return;
         }
-        const updatedSkill: Skill = {
-            id: skill.id, 
-            title: skillUpdateProperties.title !== undefined ? skillUpdateProperties.title.trim() : skill.title, 
-            proficiency: skillUpdateProperties.proficiency !== undefined ? skillUpdateProperties.proficiency : skill.proficiency 
-        };
-        skills = skills.map((skill) => {
-            if(skill.id === id)
-                return updatedSkill;
-            return skill;
-        });
-        response.json(updatedSkill);
-        return;
     }
     sendApiError(response, 400, "INVALID_ID", "Invalid skill id");
 });
 
 //DELETE
-app.delete("/skills/:id", (request, response) => {
+app.delete("/skills/:id", async(request, response, next) => {
     const id = Number(request.params.id);
 
     if(Number.isInteger(id) && id > 0){
-        const skill = skills.find(skill => skill.id === id);
-        if(skill === undefined){
-            sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+        try{
+            const isDeleted = await deleteSkill(id);
+            if(!isDeleted){
+                sendApiError(response, 404, "NOT_FOUND", `No skill with id:${id}`);
+                return;
+            }
+            response.status(204).send();
+            return;
+        } catch (error){
+            next(error);
             return;
         }
-        skills = skills.filter(skill => skill.id !== id);
-        response.status(204).send();
-        return;
     }
     sendApiError(response, 400, "INVALID_ID", "Invalid skill id");
 });
