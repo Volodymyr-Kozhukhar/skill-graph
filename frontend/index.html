@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Skill Graph</title>
+        <link rel="stylesheet" href="styles.css">
+        <script src="app.js" defer></script>
+    </head>
+    <body>
+        <header class="site-header">
+            <div class="page-container header-content">
+                <h1>Skill Graph</h1>
+                <nav class="site-nav" aria-label="Main navigation">
+                    <a href="#skills">Skills</a>
+                    <a href="#add-skill">Add skill</a>
+                    <a href="https://github.com/Volodymyr-Kozhukhar/skill-graph">GitHub</a>
+                </nav>
+            </div>
+        </header>
+
+        <main id="skills" class="page-container">
+            <header class="intro">
+                <p class="eyebrow">Your learning map</p>
+                <h2>My skills</h2>
+                <p class="intro-copy">Keep track of what you're learning, one skill at a time.</p>
+            </header>
+
+            <form id="add-skill" class="skill-form">
+                <div class="form-field">
+                    <label for="skillname">Skill name</label>
+                    <input type="text" id="skillname" name="skillname">
+                </div>
+                <div class="form-field">
+                    <label for="skillproficiency">Proficiency</label>
+                    <select name="proficiency" id="skillproficiency">
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+                <button type="submit">Add skill</button>
+            </form>
+
+            <ul class="skill-list" aria-label="Skills">
+                <li>
+                    <span id="defaultSkill1">Typescript: beginner</span>
+                    <button type="button" id="defaultSkill1DeleteButton">Delete</button>
+                </li>
+                <li>
+                    <span id="defaultSkill2">SQL: intermediate</span>
+                    <button type="button" id="defaultSkill2DeleteButton">Delete</button>
+                </li>
+            </ul>
+            <h3 id="noSkillHeading" hidden>No skills yet</h3>
+        </main>
+
+        <footer class="site-footer">
+            <div class="page-container footer-content">
+                <p>Skill Graph · Volodymyr Kozhukhar</p>
+                <a href="https://github.com/Volodymyr-Kozhukhar">GitHub profile</a>
+            </div>
+        </footer>
+    </body>
+</html>
